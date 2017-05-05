@@ -11,14 +11,23 @@ import (
 
 	"flag"
 
+	"github.com/spf13/viper"
+
 	"github.com/DiegoTUI/signpost/models"
-	"github.com/namsral/flag"
 )
 
 func main() {
-	env := "development"
+	// read environment
+	var env string
 	flag.StringVar(&env, "env", env, "Environment: 'development' or 'production'")
 	flag.Parse()
+
+	if env != "production" {
+		env = "development"
+	}
+
+	// read config
+	viper.SetConfigName("app")
 
 	usr, err := user.Current()
 	if err != nil {
