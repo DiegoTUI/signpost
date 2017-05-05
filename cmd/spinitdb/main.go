@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"io/ioutil"
 	"log"
@@ -42,17 +43,47 @@ func main() {
 
 	fmt.Printf("%s - %s\n", dbhost, dbname)
 
+	// Read the home folder
 	usr, err := user.Current()
 	if err != nil {
 		log.Fatal(err)
 		os.Exit(1)
 	}
 
+	// read capitals
 	raw, err := ioutil.ReadFile(usr.HomeDir + "/resources/capitals.json")
+	if err != nil {
+		log.Fatal(err)
+		os.Exit(1)
+	}
 	var capitals []models.Capital
 	json.Unmarshal(raw, &capitals)
 
 	fmt.Printf("number of capitals: %d\n", len(capitals))
+
+	// read world cities
+	file, err := os.Open(usr.HomeDir + "/resources/worldcities.txt")
+	if err != nil {
+		log.Fatal(err)
+		os.Exit(1)
+	}
+	scanner := bufio.NewScanner(file)
+
+	// skip the first line
+	scanner.Scan()
+
+	// fill in an array of WorldCities
+	var worldCities []models.WorldCity
+	for scanner.Scan() {
+		line := scanner.Text()
+		worldCity, err := models.NewWorldCity(line)
+		if err != nil {
+			log.Println("error parsing line: " + line)
+		}
+		worldCities = append(worldCities, *worldCity)
+	}
+
+	fmt.Printf("number of worldcities: %d\n", len(worldCities))
 
 	// connect to the DB
 	err = db.Connect(dbhost, dbname)
