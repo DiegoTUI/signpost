@@ -13,21 +13,21 @@ func TestNewCapital(t *testing.T) {
 		"type": "countryCapital"
 	}`)
 
-	city, err := models.NewCapital(jsonString)
+	capital, err := models.NewCapital(jsonString)
 
 	if err != nil {
-		t.Error("Creating a valid captal returned an error")
+		t.Error("Creating a valid capital returned an error")
 	}
 
-	if city.Country != "Spain" {
+	if capital.Country != "Spain" {
 		t.Error("Country parsed incorrectly")
 	}
 
-	if city.Capital != "Madrid" {
+	if capital.Capital != "Madrid" {
 		t.Error("Capital parsed incorrectly")
 	}
 
-	if city.Type != "countryCapital" {
+	if capital.Type != "countryCapital" {
 		t.Error("Type parsed incorrectly")
 	}
 }
