@@ -1,0 +1,7 @@
+[development]
+dbhost = "localhost"  
+dbname = "signpost"  
+
+[production]
+dbhost = "localhost"  
+dbname = "signpost"  
