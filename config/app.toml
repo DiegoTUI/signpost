@@ -3,5 +3,9 @@ dbhost = "localhost"
 dbname = "signpost"  
 
 [production]
+dbhost = "localhost-prod"  
+dbname = "signpost-prod"
+
+[testing]
 dbhost = "localhost"  
-dbname = "signpost"  
+dbname = "test"  

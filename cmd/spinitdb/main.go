@@ -13,6 +13,7 @@ import (
 
 	"github.com/spf13/viper"
 
+	"github.com/DiegoTUI/signpost/db"
 	"github.com/DiegoTUI/signpost/models"
 )
 
@@ -28,6 +29,18 @@ func main() {
 
 	// read config
 	viper.SetConfigName("app")
+	viper.AddConfigPath("config")
+
+	err := viper.ReadInConfig()
+	if err != nil {
+		log.Fatal("Config file not found...")
+		os.Exit(1)
+	}
+
+	dbhost := viper.GetString(env + ".dbhost")
+	dbname := viper.GetString(env + ".dbname")
+
+	fmt.Printf("%s - %s\n", dbhost, dbname)
 
 	usr, err := user.Current()
 	if err != nil {
@@ -40,4 +53,25 @@ func main() {
 	json.Unmarshal(raw, &capitals)
 
 	fmt.Printf("number of capitals: %d\n", len(capitals))
+
+	// connect to the DB
+	err = db.Connect(dbhost, dbname)
+	if err != nil {
+		log.Fatal(err)
+		os.Exit(1)
+	}
+
+	// add indexes
+	err = db.EnsureIndex(models.Capital{})
+	if err != nil {
+		log.Fatal(err)
+		os.Exit(1)
+	}
+
+	for _, capital := range capitals {
+		err = db.Upsert(capital)
+		if err != nil {
+			log.Println(err)
+		}
+	}
 }
