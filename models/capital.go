@@ -2,9 +2,6 @@ package models
 
 import (
 	"encoding/json"
-
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
 )
 
 // Capital defines a capital model
@@ -23,27 +20,4 @@ func NewCapital(jsonByte []byte) (*Capital, error) {
 	}
 
 	return &capital, nil
-}
-
-// Collection returns the name of the collection for the MongoObject
-func (c Capital) Collection() string {
-	return "capitals"
-}
-
-// Indexes returns the indexes for the collection in mongoDB
-func (c Capital) Indexes() []mgo.Index {
-	return []mgo.Index{
-		mgo.Index{
-			Key: []string{"country"},
-		},
-		mgo.Index{
-			Key:    []string{"capital"},
-			Unique: true,
-		},
-	}
-}
-
-// FindOneQuery returns the main query to perform upserts and findOnes
-func (c Capital) FindOneQuery() bson.M {
-	return bson.M{"capital": c.Capital}
 }

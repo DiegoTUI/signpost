@@ -4,7 +4,7 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
-	"github.com/DiegoTUI/signpost/models"
+	"github.com/DiegoTUI/signpost/interfaces"
 
 	"errors"
 )
@@ -24,13 +24,18 @@ func Connect(dbhost, dbname string) error {
 	return nil
 }
 
-// EnsureIndex adds the corresponding indexes for a MongoModel
-func EnsureIndex(item models.MongoModel) error {
+// Disconnect closes the current collection
+func Disconnect() {
+	session.Close()
+}
+
+// EnsureIndexes adds the corresponding indexes for a MongoModel
+func EnsureIndexes(item interfaces.MongoInterface, indexes []mgo.Index) error {
 	if database == nil {
 		return errors.New("Could not ensure indexes. Database not connected")
 	}
 
-	for _, index := range item.Indexes() {
+	for _, index := range indexes {
 		err := database.C(item.Collection()).EnsureIndex(index)
 		if err != nil {
 			return err
@@ -41,7 +46,7 @@ func EnsureIndex(item models.MongoModel) error {
 }
 
 // Insert inserts an element in the DB
-func Insert(item models.MongoModel) error {
+func Insert(item interfaces.MongoInterface) error {
 	if database == nil {
 		return errors.New("Could not insert. Database not connected")
 	}
@@ -52,7 +57,12 @@ func Insert(item models.MongoModel) error {
 }
 
 // Upsert upserts an element in the DB using the primary key provided
-func Upsert(item models.MongoModel) (err error) {
-	_, err = database.C(item.Collection()).Upsert(item.FindOneQuery(), bson.M{"$set": item})
+func Upsert(item interfaces.MongoInterface, findOneQuery bson.M) (err error) {
+	_, err = database.C(item.Collection()).Upsert(findOneQuery, bson.M{"$set": item})
 	return
+}
+
+// GetDB returns the current DB
+func GetDB() *mgo.Database {
+	return database
 }

@@ -7,12 +7,13 @@ import (
 	"log"
 	"os"
 	"os/user"
-
-	"fmt"
+	"time"
 
 	"flag"
 
 	"github.com/spf13/viper"
+
+	"strings"
 
 	"github.com/DiegoTUI/signpost/db"
 	"github.com/DiegoTUI/signpost/models"
@@ -41,7 +42,7 @@ func main() {
 	dbhost := viper.GetString(env + ".dbhost")
 	dbname := viper.GetString(env + ".dbname")
 
-	fmt.Printf("%s - %s\n", dbhost, dbname)
+	log.Printf("%s - %s\n", dbhost, dbname)
 
 	// Read the home folder
 	usr, err := user.Current()
@@ -59,8 +60,9 @@ func main() {
 	var capitals []models.Capital
 	json.Unmarshal(raw, &capitals)
 
-	fmt.Printf("number of capitals: %d\n", len(capitals))
+	log.Printf("number of capitals: %d\n", len(capitals))
 
+	start := time.Now()
 	// read world cities
 	file, err := os.Open(usr.HomeDir + "/resources/worldcities.txt")
 	if err != nil {
@@ -83,26 +85,65 @@ func main() {
 		worldCities = append(worldCities, *worldCity)
 	}
 
-	fmt.Printf("number of worldcities: %d\n", len(worldCities))
+	elapsed := time.Since(start)
+	log.Printf("number of worldcities: %d - ellapsed: %s\n", len(worldCities), elapsed)
+
+	// start building cities
+	var cities []models.City
+
+	for i := range capitals {
+		worldCity := searchInWorldCities(worldCities, capitals[i].Capital)
+
+		if worldCity != nil {
+			city := models.City{
+				Name:       worldCity.City,
+				Country:    capitals[i].Country,
+				Difficulty: 5,
+				IsCapital:  true,
+				Location:   models.NewGeoJSONPoint(worldCity.Latitude, worldCity.Longitude),
+			}
+
+			cities = append(cities, city)
+		} else {
+			log.Printf("Could not find match for %s", capitals[i].Capital)
+		}
+	}
+
+	log.Printf("number of cities: %d\n", len(cities))
 
 	// connect to the DB
+	log.Println("Connecting to mongo")
 	err = db.Connect(dbhost, dbname)
 	if err != nil {
 		log.Fatal(err)
 		os.Exit(1)
 	}
 
-	// add indexes
-	err = db.EnsureIndex(models.Capital{})
+	log.Println("saving cities")
+	// save cities
+	for i := range cities {
+		err := cities[i].Upsert()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	log.Println("ensuring indexes")
+	// ensure indexes
+	err = models.City{}.EnsureIndexes()
 	if err != nil {
 		log.Fatal(err)
 		os.Exit(1)
 	}
+}
 
-	for _, capital := range capitals {
-		err = db.Upsert(capital)
-		if err != nil {
-			log.Println(err)
+func searchInWorldCities(worldCities []models.WorldCity, city string) *models.WorldCity {
+	for i := range worldCities {
+		if strings.EqualFold(city, worldCities[i].City) ||
+			strings.EqualFold(city, worldCities[i].AccentCity) {
+			return &worldCities[i]
 		}
 	}
+
+	return nil
 }
