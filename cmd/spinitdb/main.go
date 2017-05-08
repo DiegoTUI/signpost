@@ -52,37 +52,20 @@ func main() {
 	}
 
 	// read capitals
-	raw, err := ioutil.ReadFile(usr.HomeDir + "/resources/capitals.json")
+	capitals, err := readCapitals(usr.HomeDir + "/resources/capitals.json")
 	if err != nil {
 		log.Fatal(err)
 		os.Exit(1)
 	}
-	var capitals []models.Capital
-	json.Unmarshal(raw, &capitals)
 
 	log.Printf("number of capitals: %d\n", len(capitals))
 
 	start := time.Now()
 	// read world cities
-	file, err := os.Open(usr.HomeDir + "/resources/worldcities.txt")
+	worldCities, err := readWorldCities(usr.HomeDir + "/resources/worldcities.txt")
 	if err != nil {
 		log.Fatal(err)
 		os.Exit(1)
-	}
-	scanner := bufio.NewScanner(file)
-
-	// skip the first line
-	scanner.Scan()
-
-	// fill in an array of WorldCities
-	var worldCities []models.WorldCity
-	for scanner.Scan() {
-		line := scanner.Text()
-		worldCity, err := models.NewWorldCity(line)
-		if err != nil {
-			log.Println("error parsing line: " + line)
-		}
-		worldCities = append(worldCities, *worldCity)
 	}
 
 	elapsed := time.Since(start)
@@ -135,6 +118,45 @@ func main() {
 		log.Fatal(err)
 		os.Exit(1)
 	}
+
+	log.Println("close db")
+	// close DB
+	db.Disconnect()
+}
+
+func readCapitals(filePath string) ([]models.Capital, error) {
+	raw, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+	var capitals []models.Capital
+	json.Unmarshal(raw, &capitals)
+
+	return capitals, nil
+}
+
+func readWorldCities(filePath string) ([]models.WorldCity, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	scanner := bufio.NewScanner(file)
+
+	// skip the first line
+	scanner.Scan()
+
+	// fill in an array of WorldCities
+	var worldCities []models.WorldCity
+	for scanner.Scan() {
+		line := scanner.Text()
+		worldCity, err := models.NewWorldCity(line)
+		if err != nil {
+			log.Println("error parsing line: " + line)
+		}
+		worldCities = append(worldCities, *worldCity)
+	}
+
+	return worldCities, nil
 }
 
 func searchInWorldCities(worldCities []models.WorldCity, city string) *models.WorldCity {
