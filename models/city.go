@@ -40,6 +40,6 @@ func (c City) Insert() error {
 }
 
 // Upsert upserts a document in the DB
-func (c City) Upsert() error {
+func (c City) Upsert() (*mgo.ChangeInfo, error) {
 	return db.Upsert(c, bson.M{"name": c.Name, "country": c.Country})
 }

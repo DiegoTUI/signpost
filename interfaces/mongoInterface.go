@@ -1,5 +1,7 @@
 package interfaces
 
+import mgo "gopkg.in/mgo.v2"
+
 // MongoInterface is an interface for all the models to be persisted in mongo.
 type MongoInterface interface {
 	// Collection returns the name of the collection for the MongoObject
@@ -12,5 +14,5 @@ type MongoInterface interface {
 	Insert() error
 
 	// Upsert upserts a document in the DB
-	Upsert() error
+	Upsert() (*mgo.ChangeInfo, error)
 }

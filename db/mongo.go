@@ -57,9 +57,8 @@ func Insert(item interfaces.MongoInterface) error {
 }
 
 // Upsert upserts an element in the DB using the primary key provided
-func Upsert(item interfaces.MongoInterface, findOneQuery bson.M) (err error) {
-	_, err = database.C(item.Collection()).Upsert(findOneQuery, bson.M{"$set": item})
-	return
+func Upsert(item interfaces.MongoInterface, findOneQuery bson.M) (*mgo.ChangeInfo, error) {
+	return database.C(item.Collection()).Upsert(findOneQuery, bson.M{"$set": item})
 }
 
 // GetDB returns the current DB

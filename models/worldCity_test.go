@@ -15,6 +15,10 @@ func TestNewWorldCity(t *testing.T) {
 		t.Error("Creating a valid world city returned an error")
 	}
 
+	if worldCity.CountryCode != "ad" {
+		t.Error("CountryCode parsed incorrectly")
+	}
+
 	if worldCity.City != "andorra la vella" {
 		t.Error("City parsed incorrectly")
 	}

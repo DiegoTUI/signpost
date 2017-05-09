@@ -8,10 +8,11 @@ import (
 
 // WorldCity defines a World city model
 type WorldCity struct {
-	City       string
-	AccentCity string
-	Latitude   float64
-	Longitude  float64
+	CountryCode string
+	City        string
+	AccentCity  string
+	Latitude    float64
+	Longitude   float64
 }
 
 // NewWorldCity creates a new world city from a CSV line
@@ -21,6 +22,7 @@ func NewWorldCity(line string) (*WorldCity, error) {
 		return nil, errors.New("Unable to parse line")
 	}
 
+	countryCode := fields[0]
 	city := fields[1]
 	accentCity := fields[2]
 
@@ -35,10 +37,11 @@ func NewWorldCity(line string) (*WorldCity, error) {
 	}
 
 	var worldCity = WorldCity{
-		City:       city,
-		AccentCity: accentCity,
-		Latitude:   latitude,
-		Longitude:  longitude,
+		CountryCode: countryCode,
+		City:        city,
+		AccentCity:  accentCity,
+		Latitude:    latitude,
+		Longitude:   longitude,
 	}
 
 	return &worldCity, nil

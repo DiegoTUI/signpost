@@ -51,6 +51,17 @@ func main() {
 		os.Exit(1)
 	}
 
+	start := time.Now()
+
+	// read world cities
+	worldCities, err := readWorldCities(usr.HomeDir + "/resources/worldcities.txt")
+	if err != nil {
+		log.Fatal(err)
+		os.Exit(1)
+	}
+
+	log.Printf("number of worldcities: %d\n", len(worldCities))
+
 	// read capitals
 	capitals, err := readCapitals(usr.HomeDir + "/resources/capitals.json")
 	if err != nil {
@@ -60,35 +71,22 @@ func main() {
 
 	log.Printf("number of capitals: %d\n", len(capitals))
 
-	start := time.Now()
-	// read world cities
-	worldCities, err := readWorldCities(usr.HomeDir + "/resources/worldcities.txt")
-	if err != nil {
-		log.Fatal(err)
-		os.Exit(1)
-	}
-
-	elapsed := time.Since(start)
-	log.Printf("number of worldcities: %d - ellapsed: %s\n", len(worldCities), elapsed)
-
 	// start building cities
 	var cities []models.City
 
-	for i := range capitals {
-		worldCity := searchInWorldCities(worldCities, capitals[i].Capital)
+	for i := range worldCities {
+		capital := searchInCapitals(&capitals, &worldCities[i])
 
-		if worldCity != nil {
+		if capital != nil {
 			city := models.City{
-				Name:       worldCity.City,
-				Country:    capitals[i].Country,
+				Name:       worldCities[i].City,
+				Country:    capital.Country,
 				Difficulty: 5,
 				IsCapital:  true,
-				Location:   models.NewGeoJSONPoint(worldCity.Latitude, worldCity.Longitude),
+				Location:   models.NewGeoJSONPoint(worldCities[i].Latitude, worldCities[i].Longitude),
 			}
 
 			cities = append(cities, city)
-		} else {
-			log.Printf("Could not find match for %s", capitals[i].Capital)
 		}
 	}
 
@@ -122,6 +120,9 @@ func main() {
 	log.Println("close db")
 	// close DB
 	db.Disconnect()
+
+	ellapsed := time.Since(start)
+	log.Printf("time ellapsed: %s\n", ellapsed)
 }
 
 func readCapitals(filePath string) ([]models.Capital, error) {
@@ -164,6 +165,19 @@ func searchInWorldCities(worldCities []models.WorldCity, city string) *models.Wo
 		if strings.EqualFold(city, worldCities[i].City) ||
 			strings.EqualFold(city, worldCities[i].AccentCity) {
 			return &worldCities[i]
+		}
+	}
+
+	return nil
+}
+
+func searchInCapitals(capitals *[]models.Capital, worldCity *models.WorldCity) *models.Capital {
+	for i := range *capitals {
+		if strings.EqualFold(worldCity.City, (*capitals)[i].Capital) ||
+			strings.EqualFold(worldCity.AccentCity, (*capitals)[i].Capital) {
+			result := &(*capitals)[i]
+			*capitals = append((*capitals)[:i], (*capitals)[i+1:]...)
+			return result
 		}
 	}
 
