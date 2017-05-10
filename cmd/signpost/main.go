@@ -23,7 +23,8 @@ import (
 )
 
 var (
-	addr = flag.String("addr", "127.0.0.1:8080", "http service address")
+	addr       = flag.String("addr", "127.0.0.1:8080", "http service address")
+	pingErrors = make(map[string]uint8)
 )
 
 const (
@@ -32,6 +33,9 @@ const (
 
 	// Maximum message size allowed from peer.
 	maxMessageSize = 8192
+
+	// Maximum message size allowed from peer.
+	maxPingErrors = 3
 
 	// Time allowed to read the next pong message from the peer.
 	pongWait = 60 * time.Second
@@ -96,8 +100,23 @@ func ping(ws *websocket.Conn, done chan struct{}) {
 	for {
 		select {
 		case <-ticker.C:
+			wsID := ws.RemoteAddr().String()
 			if err := ws.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(writeWait)); err != nil {
+				_, ok := pingErrors[wsID]
+				if ok {
+					pingErrors[wsID]++
+				} else {
+					pingErrors[wsID] = 1
+				}
+
 				log.Println("ping:", err)
+
+				if pingErrors[wsID] == maxPingErrors {
+					log.Println("closing websocket:", wsID)
+					close(done)
+				}
+			} else {
+				delete(pingErrors, wsID)
 			}
 		case <-done:
 			return
