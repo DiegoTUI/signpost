@@ -99,8 +99,3 @@ func searchInCountryCodes(countryCodes []models.CountryCode, countryCode string)
 
 	return nil
 }
-
-func prettyPrint(v interface{}) {
-	b, _ := json.MarshalIndent(v, "", "  ")
-	println(string(b))
-}

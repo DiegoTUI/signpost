@@ -61,6 +61,20 @@ func Upsert(item interfaces.MongoInterface, findOneQuery bson.M) (*mgo.ChangeInf
 	return database.C(item.Collection()).Upsert(findOneQuery, bson.M{"$set": item})
 }
 
+// Find finds all the documents matching the given query
+func Find(query bson.M, collection string, results interface{}) error {
+	return database.C(collection).Find(query).All(results)
+}
+
+// FindOne finds one document matching the given query
+func FindOne(query bson.M, result interface{}) error {
+	mongoResult, ok := result.(interfaces.MongoInterface)
+	if !ok {
+		return errors.New("Result is not a mongo interface")
+	}
+	return database.C(mongoResult.Collection()).Find(query).One(result)
+}
+
 // GetDB returns the current DB
 func GetDB() *mgo.Database {
 	return database
