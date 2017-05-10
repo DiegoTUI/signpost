@@ -4,9 +4,34 @@
 <title>Command Example</title>
 <script type="text/javascript">
 window.onload = function () {
+    function connect() {
+        conn = new WebSocket("ws://" + document.location.host + "/ws");
+        conn.onclose = function (evt) {
+            var item = document.createElement("div");
+            item.innerHTML = "<b>Connection closed.</b>";
+            appendLog(item);
+            connectButton.disabled = false;
+        };
+        conn.onopen = function (evt) {
+            var item = document.createElement("div");
+            item.innerHTML = "<b>Connection open.</b>";
+            appendLog(item);
+            connectButton.disabled = true;
+        };
+        conn.onmessage = function (evt) {
+                var item = document.createElement("div");
+                item.innerText = JSON.stringify(JSON.parse(evt.data), null, 2);
+                appendLog(item);
+        };
+    }
+
     var conn;
     var msg = document.getElementById("msg");
     var log = document.getElementById("log");
+    var connectButton = document.getElementById("connButton");
+
+    connectButton.onclick = connect;
+
     function appendLog(item) {
         var doScroll = log.scrollTop > log.scrollHeight - log.clientHeight - 1;
         log.appendChild(item);
@@ -26,20 +51,7 @@ window.onload = function () {
         return false;
     };
     if (window["WebSocket"]) {
-        conn = new WebSocket("ws://" + document.location.host + "/ws");
-        conn.onclose = function (evt) {
-            var item = document.createElement("div");
-            item.innerHTML = "<b>Connection closed.</b>";
-            appendLog(item);
-        };
-        conn.onmessage = function (evt) {
-            var messages = evt.data.split('\n');
-            for (var i = 0; i < messages.length; i++) {
-                var item = document.createElement("div");
-                item.innerText = JSON.stringify(JSON.parse(messages[i]), null, 2);
-                appendLog(item);
-            }
-        };
+        connect();
     } else {
         var item = document.createElement("div");
         item.innerHTML = "<b>Your browser does not support WebSockets.</b>";
@@ -89,6 +101,7 @@ body {
 <form id="form">
     <input type="submit" value="Send" />
     <input type="text" id="msg" size="64"/>
+    <button id="connButton" type="button" onclick="connect()">Connect</button>
 </form>
 </body>
 </html>

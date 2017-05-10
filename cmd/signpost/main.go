@@ -5,13 +5,10 @@
 package main
 
 import (
-	"bufio"
 	"flag"
-	"io"
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
 	"runtime"
 	"time"
 
@@ -26,8 +23,7 @@ import (
 )
 
 var (
-	addr    = flag.String("addr", "127.0.0.1:8080", "http service address")
-	cmdPath string
+	addr = flag.String("addr", "127.0.0.1:8080", "http service address")
 )
 
 const (
@@ -47,7 +43,7 @@ const (
 	closeGracePeriod = 10 * time.Second
 )
 
-func pumpStdin(ws *websocket.Conn, w io.Writer) {
+func pumpStdin(ws *websocket.Conn, w chan string) {
 	defer ws.Close()
 	ws.SetReadLimit(maxMessageSize)
 	ws.SetReadDeadline(time.Now().Add(pongWait))
@@ -57,27 +53,27 @@ func pumpStdin(ws *websocket.Conn, w io.Writer) {
 		if err != nil {
 			break
 		}
-		message = append(message, '\n')
-		if _, err := w.Write(message); err != nil {
-			break
-		}
+		message = append(message)
+		log.Println("message in", string(message))
+		w <- string(message)
 	}
 }
 
-func pumpStdout(ws *websocket.Conn, r io.Reader, done chan struct{}) {
+func pumpStdout(ws *websocket.Conn, r chan string, done chan struct{}) {
 	defer func() {
 	}()
-	s := bufio.NewScanner(r)
-	for s.Scan() {
+
+	for message := range r {
+		log.Println("message out", message)
 		ws.SetWriteDeadline(time.Now().Add(writeWait))
 		// go look in the db for a city
-		query := bson.M{"name": string(s.Bytes())}
+		query := bson.M{"name": message}
 		cities := []models.City{}
 
 		err := db.Find(query, models.City{}.Collection(), &cities)
 		if err != nil {
 			log.Println("error in find", err)
-			break
+			continue
 		}
 
 		if err := ws.WriteJSON(cities); err != nil {
@@ -85,9 +81,7 @@ func pumpStdout(ws *websocket.Conn, r io.Reader, done chan struct{}) {
 			break
 		}
 	}
-	if s.Err() != nil {
-		log.Println("scan:", s.Err())
-	}
+
 	close(done)
 
 	ws.SetWriteDeadline(time.Now().Add(writeWait))
@@ -127,60 +121,13 @@ func serveWs(w http.ResponseWriter, r *http.Request) {
 
 	defer ws.Close()
 
-	outr, outw, err := os.Pipe()
-	if err != nil {
-		internalError(ws, "stdout:", err)
-		return
-	}
-	defer outr.Close()
-	defer outw.Close()
-
-	inr, inw, err := os.Pipe()
-	if err != nil {
-		internalError(ws, "stdin:", err)
-		return
-	}
-	defer inr.Close()
-	defer inw.Close()
-
-	proc, err := os.StartProcess(cmdPath, flag.Args(), &os.ProcAttr{
-		Files: []*os.File{inr, outw, outw},
-	})
-	if err != nil {
-		internalError(ws, "start:", err)
-		return
-	}
-
-	inr.Close()
-	outw.Close()
+	reader := make(chan string, 100)
 
 	stdoutDone := make(chan struct{})
-	go pumpStdout(ws, outr, stdoutDone)
+	go pumpStdout(ws, reader, stdoutDone)
 	go ping(ws, stdoutDone)
 
-	pumpStdin(ws, inw)
-
-	// Some commands will exit when stdin is closed.
-	inw.Close()
-
-	// Other commands need a bonk on the head.
-	if err := proc.Signal(os.Interrupt); err != nil {
-		log.Println("inter:", err)
-	}
-
-	select {
-	case <-stdoutDone:
-	case <-time.After(time.Second):
-		// A bigger bonk on the head.
-		if err := proc.Signal(os.Kill); err != nil {
-			log.Println("term:", err)
-		}
-		<-stdoutDone
-	}
-
-	if _, err := proc.Wait(); err != nil {
-		log.Println("wait:", err)
-	}
+	pumpStdin(ws, reader)
 }
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
@@ -221,10 +168,6 @@ func main() {
 	dbhost := viper.GetString(env + ".dbhost")
 	dbname := viper.GetString(env + ".dbname")
 
-	if len(flag.Args()) < 1 {
-		log.Fatal("must specify at least one argument")
-	}
-
 	// connect to the DB
 	log.Println("Connecting to mongo")
 	err = db.Connect(dbhost, dbname)
@@ -233,10 +176,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	cmdPath, err = exec.LookPath(flag.Args()[0])
-	if err != nil {
-		log.Fatal(err)
-	}
+	// handle requests
 	http.HandleFunc("/", serveHome)
 	http.HandleFunc("/ws", serveWs)
 	log.Fatal(http.ListenAndServe(*addr, nil))
