@@ -25,6 +25,7 @@ import (
 var (
 	addr       = flag.String("addr", "127.0.0.1:8080", "http service address")
 	pingErrors = make(map[string]uint8)
+	upgrader   = websocket.Upgrader{}
 )
 
 const (
@@ -124,13 +125,6 @@ func ping(ws *websocket.Conn, done chan struct{}) {
 	}
 }
 
-func internalError(ws *websocket.Conn, msg string, err error) {
-	log.Println(msg, err)
-	ws.WriteMessage(websocket.TextMessage, []byte("Internal server error."))
-}
-
-var upgrader = websocket.Upgrader{}
-
 func serveWs(w http.ResponseWriter, r *http.Request) {
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -140,13 +134,13 @@ func serveWs(w http.ResponseWriter, r *http.Request) {
 
 	defer ws.Close()
 
-	reader := make(chan string, 100)
+	buffer := make(chan string, 100)
 
 	stdoutDone := make(chan struct{})
-	go pumpStdout(ws, reader, stdoutDone)
+	go pumpStdout(ws, buffer, stdoutDone)
 	go ping(ws, stdoutDone)
 
-	pumpStdin(ws, reader)
+	pumpStdin(ws, buffer)
 }
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
