@@ -6,7 +6,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-// City defines a city mofor signpostingdel
+// City defines a city model for signposting
 type City struct {
 	ID         bson.ObjectId `bson:"_id,omitempty" json:"cityId"`
 	Name       string        `bson:"name" json:"name"`
