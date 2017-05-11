@@ -1,7 +1,11 @@
 package models
 
 import (
+	"log"
+
 	"github.com/DiegoTUI/signpost/db"
+	"github.com/DiegoTUI/signpost/utils"
+	"github.com/golang/geo/s2"
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -25,6 +29,73 @@ func (s Signpost) Collection() string {
 	return "signposts"
 }
 
+// NewSignpost creates a new signpost with the given parameters
+func NewSignpost(center City,
+	minNumberOfSigns, maxNumberOfSigns uint8,
+	minDistance, maxDistance float64,
+	minDifficulty, maxDifficulty uint8) (*Signpost, error) {
+	// check for the obvious
+	if maxNumberOfSigns < minNumberOfSigns ||
+		maxDistance < minDistance ||
+		maxDifficulty < minDifficulty {
+		return nil, nil
+	}
+
+	// build the geo query to the cities collection
+	query := bson.M{
+		"difficulty": bson.M{
+			"$gte": minDifficulty,
+			"$lte": maxDifficulty,
+		},
+		"location": bson.M{
+			"$near": bson.M{
+				"geometry": bson.M{
+					"type":        "Point",
+					"coordinates": center.Location.Coordinates,
+				},
+				"$maxDistance": maxDistance,
+				"$minDistance": minDistance,
+			},
+		},
+	}
+
+	// perform the query
+	var cities []City
+
+	err := db.Find(query, City{}.Collection(), &cities)
+	if err != nil {
+		log.Println("error in find", err)
+		return nil, err
+	}
+
+	// check for the minimum number of cities
+	if len(cities) < int(minNumberOfSigns) {
+		return nil, nil
+	}
+
+	// set the number of sities for the signpost
+	numberOfCities := len(cities)
+	if numberOfCities > int(maxNumberOfSigns) {
+		numberOfCities = int(maxNumberOfSigns)
+	}
+
+	cityDistribution := make(map[float64][]*City)
+
+	// distribute cities
+	for i := range cities {
+		city := &cities[i]
+		latLngCenter := s2.LatLngFromDegrees(center.Location.Coordinates[1],
+			center.Location.Coordinates[0])
+		latLngCity := s2.LatLngFromDegrees(city.Location.Coordinates[1],
+			city.Location.Coordinates[0])
+		angle := utils.AngleToTheNorth(latLngCenter, latLngCity)
+
+		log.Println(cityDistribution, angle)
+	}
+
+	return nil, nil
+}
+
 // EnsureIndexes ensures tghe indexes of a certain model
 func (s Signpost) EnsureIndexes() error {
 	indexes := []mgo.Index{
@@ -42,5 +113,13 @@ func (s Signpost) Insert() error {
 
 // Upsert upserts a document in the DB
 func (s Signpost) Upsert() (*mgo.ChangeInfo, error) {
-	return db.Upsert(s, bson.M{})
+	query := bson.M{
+		"center.name":    s.Center.Name,
+		"center.country": s.Center.Country,
+		"signs": bson.M{
+			"$size": len(s.Signs),
+			"$all":  s.Signs,
+		},
+	}
+	return db.Upsert(s, query)
 }
