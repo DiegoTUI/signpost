@@ -1,6 +1,7 @@
 package models
 
 import (
+	"errors"
 	"log"
 
 	"github.com/DiegoTUI/signpost/db"
@@ -14,11 +15,12 @@ import (
 type Signpost struct {
 	ID         bson.ObjectId `bson:"_id,omitempty" json:"cityId"`
 	Center     City          `bson:"center" json:"center"`
-	Signs      []sign        `bson:"sign" json:"sign"`
+	Signs      []Sign        `bson:"sign" json:"sign"`
 	Difficulty uint8         `bson:"difficulty" json:"difficulty"`
 }
 
-type sign struct {
+// Sign defines a sign model
+type Sign struct {
 	City     City    `bson:"city" json:"city"`
 	Angle    float64 `bson:"angle" json:"angle"`
 	Distance float64 `bson:"distance" json:"distance"`
@@ -79,7 +81,8 @@ func NewSignpost(center City,
 		numberOfCities = int(maxNumberOfSigns)
 	}
 
-	cityDistribution := make(map[float64][]*City)
+	cityDistribution := make([][]*Sign, numberOfCities, numberOfCities)
+	portion := 360 / numberOfCities
 
 	// distribute cities
 	for i := range cities {
@@ -88,9 +91,25 @@ func NewSignpost(center City,
 			center.Location.Coordinates[0])
 		latLngCity := s2.LatLngFromDegrees(city.Location.Coordinates[1],
 			city.Location.Coordinates[0])
-		angle := utils.AngleToTheNorth(latLngCenter, latLngCity)
+		angle := utils.AngleToTheNorth(latLngCenter, latLngCity).Degrees()
+		if angle < 0 {
+			angle += 360
+		}
+		distance := utils.EarthDistance(latLngCenter, latLngCity)
 
-		log.Println(cityDistribution, angle)
+		sign := Sign{
+			City:     *city,
+			Angle:    angle,
+			Distance: distance,
+		}
+
+		index := int(angle) / portion
+		cityDistribution[index] = append(cityDistribution[index], &sign)
+	}
+
+	// select signs
+	for i := range cityDistribution {
+		log.Print(i)
 	}
 
 	return nil, nil
@@ -122,4 +141,18 @@ func (s Signpost) Upsert() (*mgo.ChangeInfo, error) {
 		},
 	}
 	return db.Upsert(s, query)
+}
+
+// SignArrayExtract receives a slice and extracts an element from it
+// returns the element, the modified slice and an error
+func SignArrayExtract(inputSlice []*Sign, index int) (*Sign, []*Sign, error) {
+	if index >= len(inputSlice) {
+		return nil, nil, errors.New("Index out of bounds")
+	}
+
+	cloned := append([]*Sign(nil), inputSlice...)
+	element := cloned[index]
+	newSlice := append(cloned[:index], cloned[index+1:]...)
+
+	return element, newSlice, nil
 }
