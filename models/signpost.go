@@ -75,6 +75,12 @@ func NewSignpost(center City,
 		return nil, nil
 	}
 
+	// create the signpost with no signs
+	result := Signpost{
+		Center:     center,
+		Difficulty: 5,
+	}
+
 	// set the number of sities for the signpost
 	numberOfCities := len(cities)
 	if numberOfCities > int(maxNumberOfSigns) {
@@ -108,11 +114,20 @@ func NewSignpost(center City,
 	}
 
 	// select signs
-	for i := range cityDistribution {
-		log.Print(i)
+	for i, currentFragment := range cityDistribution {
+		for {
+		}
 	}
 
 	return nil, nil
+}
+
+func selectSignFromFragment(currentFragment []*Sign) *Sign {
+	if len(currentFragment) > 0 {
+		return currentFragment[utils.RandomInt(0, len(currentFragment))]
+	}
+
+	return nil
 }
 
 // EnsureIndexes ensures tghe indexes of a certain model

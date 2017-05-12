@@ -128,3 +128,12 @@ func TestEarthDistance(t *testing.T) {
 		}
 	}
 }
+
+func TestRandomInt(t *testing.T) {
+	for i := 0; i < 10000; i++ {
+		random := utils.RandomInt(0, 10)
+		if random < 0 || random >= 10 {
+			t.Error("RandomInt failed - ", random)
+		}
+	}
+}

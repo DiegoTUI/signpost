@@ -1,9 +1,14 @@
 package utils
 
-import "encoding/json"
-import "github.com/golang/geo/s2"
-import "github.com/golang/geo/s1"
-import "math"
+import (
+	"encoding/json"
+	"math"
+	"math/rand"
+	"time"
+
+	"github.com/golang/geo/s1"
+	"github.com/golang/geo/s2"
+)
 
 // PrettyPrint pretty prints an object
 func PrettyPrint(v interface{}) string {
@@ -30,4 +35,10 @@ func EarthDistance(origin, destination s2.LatLng) float64 {
 		angle = 2*math.Pi - angle
 	}
 	return RADIUS * angle
+}
+
+// RandomInt returns a random int between min and max
+func RandomInt(min, max int) int {
+	rand.Seed(time.Now().UnixNano())
+	return rand.Intn(max-min) + min
 }
