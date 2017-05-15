@@ -81,14 +81,14 @@ func NewSignpost(center City,
 		Difficulty: 5,
 	}
 
-	// set the number of sities for the signpost
-	numberOfCities := len(cities)
-	if numberOfCities > int(maxNumberOfSigns) {
-		numberOfCities = int(maxNumberOfSigns)
+	// set the number of signs for the signpost
+	numberOfSigns := len(cities)
+	if numberOfSigns > int(maxNumberOfSigns) {
+		numberOfSigns = int(maxNumberOfSigns)
 	}
 
-	cityDistribution := make([][]*Sign, numberOfCities, numberOfCities)
-	portion := 360 / numberOfCities
+	signDistribution := make([][]*Sign, numberOfSigns, numberOfSigns)
+	portion := 360 / numberOfSigns
 
 	// distribute cities
 	for i := range cities {
@@ -110,24 +110,56 @@ func NewSignpost(center City,
 		}
 
 		index := int(angle) / portion
-		cityDistribution[index] = append(cityDistribution[index], &sign)
+		signDistribution[index] = append(signDistribution[index], &sign)
 	}
 
 	// select signs
-	for i, currentFragment := range cityDistribution {
+	for i := range signDistribution {
+		offset := 0
 		for {
+			normalizedIndex := circularIndex(i+offset, len(signDistribution))
+			sign, newFragment, err := selectSignFromFragment(signDistribution[normalizedIndex])
+			if err != nil {
+				offset = nextOffset(offset)
+			} else {
+				result.Signs = append(result.Signs, *sign)
+				signDistribution[normalizedIndex] = newFragment
+				break
+			}
 		}
 	}
 
-	return nil, nil
+	return &result, nil
 }
 
-func selectSignFromFragment(currentFragment []*Sign) *Sign {
-	if len(currentFragment) > 0 {
-		return currentFragment[utils.RandomInt(0, len(currentFragment))]
+func circularIndex(index, length int) int {
+	for index < 0 {
+		index += length
 	}
 
-	return nil
+	return index % length
+}
+
+func nextOffset(currentOffset int) int {
+	if currentOffset == 0 {
+		return 1
+	}
+	if currentOffset > 0 {
+		return -currentOffset
+	}
+
+	return -currentOffset + 1
+}
+
+// returns the sign, the new fragment without the sign or an error
+func selectSignFromFragment(currentFragment []*Sign) (*Sign, []*Sign, error) {
+	index := utils.RandomInt(0, len(currentFragment))
+	sign, newFragment, err := SignArrayExtract(currentFragment, index)
+	if err != nil {
+		return nil, currentFragment, err
+	}
+
+	return sign, newFragment, nil
 }
 
 // EnsureIndexes ensures tghe indexes of a certain model

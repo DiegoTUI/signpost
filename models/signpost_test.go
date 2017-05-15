@@ -28,8 +28,15 @@ func TestArrayExtract(t *testing.T) {
 		t.Error("ArrayExtract did not return index out of bounds")
 	}
 
+	// extract element from empty array
+	emptyArray := []*models.Sign{}
+	item, sliced, err := models.SignArrayExtract(emptyArray, 0)
+	if err == nil {
+		t.Error("Extracting an element from an empty array did NOT return an error")
+	}
+
 	// extract element in the middle
-	item, sliced, err := models.SignArrayExtract(array, 2)
+	item, sliced, err = models.SignArrayExtract(array, 2)
 	if err != nil {
 		t.Error("ArrayExtract did return an error for element 2")
 	}
