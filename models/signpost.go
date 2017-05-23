@@ -51,7 +51,7 @@ func NewSignpost(center City,
 		},
 		"location": bson.M{
 			"$near": bson.M{
-				"geometry": bson.M{
+				"$geometry": bson.M{
 					"type":        "Point",
 					"coordinates": center.Location.Coordinates,
 				},

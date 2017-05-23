@@ -3,7 +3,11 @@ package models_test
 import (
 	"testing"
 
+	"gopkg.in/mgo.v2/bson"
+
+	"github.com/DiegoTUI/signpost/db"
 	"github.com/DiegoTUI/signpost/models"
+	"github.com/spf13/viper"
 )
 
 func TestArrayExtract(t *testing.T) {
@@ -100,4 +104,39 @@ func TestArrayExtract(t *testing.T) {
 		array[3].Distance != 3 {
 		t.Error("ArrayExtract modified original array for element 0")
 	}
+}
+
+func TestNewSignpost(t *testing.T) {
+	// read config
+	viper.SetConfigName("app")
+	viper.AddConfigPath("../config")
+
+	err := viper.ReadInConfig()
+	if err != nil {
+		t.Error("config file could not be read")
+	}
+
+	dbhost := viper.GetString("testing.dbhost")
+	dbname := viper.GetString("testing.dbname")
+	// connect to the db
+	err = db.Connect(dbhost, dbname)
+	if err != nil {
+		t.Error("DB connection failed")
+	}
+	// get the city of Madrid
+	city := models.City{}
+
+	err = db.FindOne(bson.M{"name": "Madrid"}, &city)
+
+	if err != nil {
+		t.Error("findOne failed for Madrid")
+	}
+
+	signpost, err := models.NewSignpost(city, 2, 4, 3000, 6000, 3, 7)
+
+	if err != nil {
+		t.Error("Creating a signpost failed", err)
+	}
+
+	t.Log(signpost)
 }

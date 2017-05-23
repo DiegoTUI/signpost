@@ -8,4 +8,4 @@ dbname = "signpost-prod"
 
 [testing]
 dbhost = "localhost"  
-dbname = "test"  
+dbname = "signpost-test"  

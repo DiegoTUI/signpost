@@ -1,0 +1,1 @@
+{"options":{},"indexes":[{"v":1,"key":{"_id":1},"name":"_id_","ns":"signpost.cities"},{"v":1,"key":{"country":1},"name":"country_1","ns":"signpost.cities"},{"v":1,"key":{"name":1},"name":"name_1","ns":"signpost.cities"},{"v":1,"key":{"location":"2dsphere"},"name":"location_2dsphere","ns":"signpost.cities","2dsphereIndexVersion":3}]}

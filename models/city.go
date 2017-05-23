@@ -21,7 +21,7 @@ func (c City) Collection() string {
 	return "cities"
 }
 
-// EnsureIndexes ensures tghe indexes of a certain model
+// EnsureIndexes ensures the indexes of a certain model
 func (c City) EnsureIndexes() error {
 	indexes := []mgo.Index{
 		mgo.Index{
@@ -29,6 +29,9 @@ func (c City) EnsureIndexes() error {
 		},
 		mgo.Index{
 			Key: []string{"name"},
+		},
+		mgo.Index{
+			Key: []string{"2dsphere:location"},
 		},
 	}
 	return db.EnsureIndexes(c, indexes)
