@@ -3,6 +3,8 @@ package models
 import (
 	"errors"
 	"log"
+	"strconv"
+	"strings"
 
 	"github.com/DiegoTUI/signpost/db"
 	"github.com/DiegoTUI/signpost/utils"
@@ -26,6 +28,17 @@ type Sign struct {
 	Distance float64 `bson:"distance" json:"distance"`
 }
 
+// SignpostQuery defines a query for a signpost
+type SignpostQuery struct {
+	Center           City   `bson:"center" json:"center"`
+	MinNumberOfSigns uint8  `bson:"minNumberOfSigns" json:"minNumberOfSigns"`
+	MaxNumberOfSigns uint8  `bson:"maxNumberOfSigns" json:"maxNumberOfSigns"`
+	MinDistance      uint32 `bson:"minDistance" json:"minDistance"`
+	MaxDistance      uint32 `bson:"maxDistance" json:"maxDistance"`
+	MinDifficulty    uint8  `bson:"minDifficulty" json:"minDifficulty"`
+	MaxDifficulty    uint8  `bson:"maxDifficulty" json:"maxDifficulty"`
+}
+
 // Collection returns the name of the collection for the MongoObject
 func (s Signpost) Collection() string {
 	return "signposts"
@@ -34,7 +47,7 @@ func (s Signpost) Collection() string {
 // NewSignpost creates a new signpost with the given parameters
 func NewSignpost(center City,
 	minNumberOfSigns, maxNumberOfSigns uint8,
-	minDistance, maxDistance float64,
+	minDistance, maxDistance uint32,
 	minDifficulty, maxDifficulty uint8) (*Signpost, error) {
 	// check for the obvious
 	if maxNumberOfSigns < minNumberOfSigns ||
@@ -130,6 +143,59 @@ func NewSignpost(center City,
 	}
 
 	return &result, nil
+}
+
+// NewSignpostQuery creates a new signpost query with the given string
+func NewSignpostQuery(queryString string) (*SignpostQuery, error) {
+	fields := make([]string, 7, 7)
+	for i, field := range strings.Split(queryString, "|") {
+		fields[i] = field
+	}
+
+	var center City
+	centerCityName := fields[0]
+
+	err := db.FindOne(bson.M{"name": centerCityName}, &center)
+
+	if err != nil {
+		return nil, errors.New("Could not find a city with the given name" + centerCityName)
+	}
+
+	var minNumberOfSigns, minDistance, minDifficulty, maxNumberOfSigns, maxDistance, maxDifficulty uint64
+
+	if minNumberOfSigns, err = strconv.ParseUint(fields[1], 10, 8); err != nil {
+		minNumberOfSigns = 0
+	}
+
+	if minDistance, err = strconv.ParseUint(fields[2], 10, 32); err != nil {
+		minDistance = 0
+	}
+
+	if minDifficulty, err = strconv.ParseUint(fields[3], 10, 8); err != nil {
+		minDifficulty = 0
+	}
+
+	if maxNumberOfSigns, err = strconv.ParseUint(fields[4], 10, 8); err != nil {
+		maxNumberOfSigns = 10
+	}
+
+	if maxDistance, err = strconv.ParseUint(fields[5], 10, 32); err != nil {
+		maxDistance = 10000000
+	}
+
+	if maxDifficulty, err = strconv.ParseUint(fields[6], 10, 8); err != nil {
+		maxDifficulty = 10
+	}
+
+	return &SignpostQuery{
+		Center:           center,
+		MinNumberOfSigns: uint8(minNumberOfSigns),
+		MaxNumberOfSigns: uint8(maxNumberOfSigns),
+		MinDistance:      uint32(minDistance),
+		MaxDistance:      uint32(maxDistance),
+		MinDifficulty:    uint8(minDifficulty),
+		MaxDifficulty:    uint8(maxDifficulty),
+	}, nil
 }
 
 func circularIndex(index, length int) int {

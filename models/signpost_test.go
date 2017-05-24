@@ -107,33 +107,31 @@ func TestArrayExtract(t *testing.T) {
 }
 
 func TestNewSignpost(t *testing.T) {
-	// read config
-	viper.SetConfigName("app")
-	viper.AddConfigPath("../config")
+	// Connect to DB
+	connectToDb(t)
 
-	err := viper.ReadInConfig()
-	if err != nil {
-		t.Error("config file could not be read")
-	}
-
-	dbhost := viper.GetString("testing.dbhost")
-	dbname := viper.GetString("testing.dbname")
-	// connect to the db
-	err = db.Connect(dbhost, dbname)
-	if err != nil {
-		t.Error("DB connection failed")
-	}
 	// get the city of Madrid
-	center := models.City{}
+	var center models.City
 
-	err = db.FindOne(bson.M{"name": "Madrid"}, &center)
+	err := db.FindOne(bson.M{"name": "Madrid"}, &center)
 
 	if err != nil {
 		t.Error("findOne failed for Madrid")
 	}
 
+	// wrong params
+	signpost, err := models.NewSignpost(center, 6, 3, 0, 600000, 2, 7)
+
+	if err != nil {
+		t.Error("Creating a signpost failed", err)
+	}
+
+	if signpost != nil {
+		t.Error("Created a signpost with wrong params", err)
+	}
+
 	// low radius
-	signpost, err := models.NewSignpost(center, 3, 6, 0, 600000, 2, 7)
+	signpost, err = models.NewSignpost(center, 3, 6, 0, 600000, 2, 7)
 
 	if err != nil {
 		t.Error("Creating a signpost failed", err)
@@ -157,6 +155,9 @@ func TestNewSignpost(t *testing.T) {
 	}
 
 	checkCenterNotInSigns(t, center, signpost.Signs)
+
+	// disconnect DB
+	db.Disconnect()
 }
 
 func checkCenterNotInSigns(t *testing.T, center models.City, signs []models.Sign) {
@@ -165,4 +166,105 @@ func checkCenterNotInSigns(t *testing.T, center models.City, signs []models.Sign
 			t.Error("Center was included in the signpost")
 		}
 	}
+}
+
+func connectToDb(t *testing.T) {
+	// read config
+	viper.SetConfigName("app")
+	viper.AddConfigPath("../config")
+
+	err := viper.ReadInConfig()
+	if err != nil {
+		t.Error("config file could not be read")
+	}
+
+	dbhost := viper.GetString("testing.dbhost")
+	dbname := viper.GetString("testing.dbname")
+	// connect to the db
+	err = db.Connect(dbhost, dbname)
+	if err != nil {
+		t.Error("DB connection failed")
+	}
+}
+
+func TestNewSignpostQuery(t *testing.T) {
+	// connect to db
+	connectToDb(t)
+
+	// unexisting city
+	signpostQuery, err := models.NewSignpostQuery("kkfu")
+	if err == nil || signpostQuery != nil {
+		t.Error("Empty string did not produce the expected results")
+	}
+
+	// existing city, nil params
+	signpostQuery, err = models.NewSignpostQuery("Madrid")
+	if err != nil {
+		t.Error("Existing city returned an error")
+	}
+
+	if signpostQuery.Center.Name != "Madrid" {
+		t.Error("Wrong name for existing city nil params")
+	}
+
+	if signpostQuery.MinNumberOfSigns != 0 {
+		t.Error("Wrong minNumberOfSigns for existing city nil params")
+	}
+
+	if signpostQuery.MaxNumberOfSigns != 10 {
+		t.Error("Wrong maxNumberOfSigns for existing city nil params")
+	}
+
+	if signpostQuery.MinDistance != 0 {
+		t.Error("Wrong MinDistance for existing city nil params")
+	}
+
+	if signpostQuery.MaxDistance != 10000000 {
+		t.Error("Wrong MaxDistance for existing city nil params")
+	}
+
+	if signpostQuery.MinDifficulty != 0 {
+		t.Error("Wrong MinDifficulty for existing city nil params")
+	}
+
+	if signpostQuery.MaxDifficulty != 10 {
+		t.Error("Wrong MaxDifficulty for existing city nil params")
+	}
+
+	// existing city, non-nil params
+	signpostQuery, err = models.NewSignpostQuery("Madrid|invalid|3000|4|5|invalid|6")
+	if err != nil {
+		t.Error("Existing city returned an error")
+	}
+
+	if signpostQuery.Center.Name != "Madrid" {
+		t.Error("Wrong name for existing city non-nil params")
+	}
+
+	if signpostQuery.MinNumberOfSigns != 0 {
+		t.Error("Wrong minNumberOfSigns for existing city non-nil params")
+	}
+
+	if signpostQuery.MaxNumberOfSigns != 5 {
+		t.Error("Wrong maxNumberOfSigns for existing city non-nil params")
+	}
+
+	if signpostQuery.MinDistance != 3000 {
+		t.Error("Wrong MinDistance for existing city non-nil params")
+	}
+
+	if signpostQuery.MaxDistance != 10000000 {
+		t.Error("Wrong MaxDistance for existing city non-nil params")
+	}
+
+	if signpostQuery.MinDifficulty != 4 {
+		t.Error("Wrong MinDifficulty for existing city non-nil params")
+	}
+
+	if signpostQuery.MaxDifficulty != 6 {
+		t.Error("Wrong MaxDifficulty for existing city non-nil params")
+	}
+
+	// disconnect DB
+	db.Disconnect()
 }
