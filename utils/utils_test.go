@@ -136,4 +136,9 @@ func TestRandomInt(t *testing.T) {
 			t.Error("RandomInt failed - ", random)
 		}
 	}
+
+	random := utils.RandomInt(0, 0)
+	if random != 0 {
+		t.Error("RandomInt with two zeroes failed - ", random)
+	}
 }

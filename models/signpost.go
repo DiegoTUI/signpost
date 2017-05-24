@@ -56,14 +56,13 @@ func NewSignpost(center City,
 					"coordinates": center.Location.Coordinates,
 				},
 				"$maxDistance": maxDistance,
-				"$minDistance": minDistance,
+				"$minDistance": minDistance + 15, // to prevent the center city to appear
 			},
 		},
 	}
 
 	// perform the query
 	var cities []City
-
 	err := db.Find(query, City{}.Collection(), &cities)
 	if err != nil {
 		log.Println("error in find", err)
@@ -72,6 +71,7 @@ func NewSignpost(center City,
 
 	// check for the minimum number of cities
 	if len(cities) < int(minNumberOfSigns) {
+		log.Println("not enough cities")
 		return nil, nil
 	}
 

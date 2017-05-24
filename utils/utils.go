@@ -39,6 +39,9 @@ func EarthDistance(origin, destination s2.LatLng) float64 {
 
 // RandomInt returns a random int between min and max
 func RandomInt(min, max int) int {
+	if min == max {
+		return min
+	}
 	rand.Seed(time.Now().UnixNano())
 	return rand.Intn(max-min) + min
 }

@@ -124,19 +124,45 @@ func TestNewSignpost(t *testing.T) {
 		t.Error("DB connection failed")
 	}
 	// get the city of Madrid
-	city := models.City{}
+	center := models.City{}
 
-	err = db.FindOne(bson.M{"name": "Madrid"}, &city)
+	err = db.FindOne(bson.M{"name": "Madrid"}, &center)
 
 	if err != nil {
 		t.Error("findOne failed for Madrid")
 	}
 
-	signpost, err := models.NewSignpost(city, 2, 4, 3000, 6000, 3, 7)
+	// low radius
+	signpost, err := models.NewSignpost(center, 3, 6, 0, 600000, 2, 7)
 
 	if err != nil {
 		t.Error("Creating a signpost failed", err)
 	}
 
-	t.Log(signpost)
+	if len(signpost.Signs) != 3 {
+		t.Error("Creating a signpost for Madrid at 600km and min 3 failed", len(signpost.Signs))
+	}
+
+	checkCenterNotInSigns(t, center, signpost.Signs)
+
+	// high radius
+	signpost, err = models.NewSignpost(center, 3, 6, 0, 1000000, 2, 7)
+
+	if err != nil {
+		t.Error("Creating a signpost failed", err)
+	}
+
+	if len(signpost.Signs) != 6 {
+		t.Error("Creating a signpost for Madrid at 1000km and max 6 failed", len(signpost.Signs))
+	}
+
+	checkCenterNotInSigns(t, center, signpost.Signs)
+}
+
+func checkCenterNotInSigns(t *testing.T, center models.City, signs []models.Sign) {
+	for i := range signs {
+		if signs[i].City == center {
+			t.Error("Center was included in the signpost")
+		}
+	}
 }
