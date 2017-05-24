@@ -4,10 +4,10 @@ import (
 	"log"
 	"time"
 
-	"github.com/DiegoTUI/signpost/db"
+	"gopkg.in/mgo.v2/bson"
+
 	"github.com/DiegoTUI/signpost/models"
 	"github.com/gorilla/websocket"
-	"gopkg.in/mgo.v2/bson"
 )
 
 var (
@@ -58,16 +58,20 @@ func pumpStdout(ws *websocket.Conn, r chan string, done chan struct{}) {
 		log.Println("message out", message)
 		ws.SetWriteDeadline(time.Now().Add(writeWait))
 		// go look in the db for a city
-		query := bson.M{"name": message}
-		cities := []models.City{}
-
-		err := db.Find(query, models.City{}.Collection(), &cities)
+		query, err := models.NewSignpostQuery(message)
 		if err != nil {
-			log.Println("error in find", err)
+			ws.WriteJSON(bson.M{"error": err.Error()})
 			continue
 		}
 
-		if err := ws.WriteJSON(cities); err != nil {
+		signpost, err := models.NewSignpost(query.Center, query.MinNumberOfSigns, query.MaxNumberOfSigns,
+			query.MinDistance, query.MaxDistance, query.MinDifficulty, query.MaxDifficulty)
+		if err != nil {
+			ws.WriteJSON(bson.M{"error": err.Error()})
+			continue
+		}
+
+		if err := ws.WriteJSON(signpost); err != nil {
 			ws.Close()
 			break
 		}

@@ -20,7 +20,8 @@ window.onload = function () {
         };
         conn.onmessage = function (evt) {
                 var item = document.createElement("div");
-                item.innerText = JSON.stringify(JSON.parse(evt.data), null, 2);
+                item.innerText = JSON.stringify(JSON.parse(evt.data), undefined, 2);
+                clearLog();
                 appendLog(item);
         };
     }
@@ -38,6 +39,10 @@ window.onload = function () {
         if (doScroll) {
             log.scrollTop = log.scrollHeight - log.clientHeight;
         }
+    }
+
+    function clearLog() {
+        log.innerHTML = "";
     }
     document.getElementById("form").onsubmit = function () {
         if (!conn) {
@@ -97,7 +102,7 @@ body {
 </style>
 </head>
 <body>
-<div id="log"></div>
+<pre id="log"></pre>
 <form id="form">
     <input type="submit" value="Send" />
     <input type="text" id="msg" size="64"/>
