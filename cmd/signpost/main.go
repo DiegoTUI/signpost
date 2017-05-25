@@ -20,9 +20,11 @@ import (
 )
 
 var (
-	addr     = flag.String("addr", "127.0.0.1:8080", "http service address")
-	upgrader = websocket.Upgrader{}
-	host     string
+	servingAddress = flag.String("addr", "127.0.0.1:8080", "http service address")
+	upgrader       = websocket.Upgrader{}
+	env            = flag.String("env", "development", "Environment: 'development' or 'production'")
+	host           = flag.String("host", "", "Host: if missing, it will add the external IP")
+	port           = flag.String("port", "8080", "Host: if missing, it will add the external IP")
 )
 
 func serveWs(w http.ResponseWriter, r *http.Request) {
@@ -62,8 +64,8 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var externalIP string
-	if len(host) > 0 {
-		externalIP = host
+	if len(*host) > 0 {
+		externalIP = *host
 	} else {
 		externalIP, err = utils.GetExternalIP()
 		if err != nil {
@@ -73,7 +75,7 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 	}
 
 	context := map[string]string{
-		"host": externalIP + ":8080",
+		"host": externalIP + ":" + *port,
 	}
 
 	homePage, err := raymond.Render(string(fileBytes), context)
@@ -86,14 +88,11 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	// read environment
-	var env string
-	flag.StringVar(&env, "env", env, "Environment: 'development' or 'production'")
-	flag.StringVar(&host, "host", host, "Host: if missing, it will add the external IP")
+	// read flags
 	flag.Parse()
 
-	if env != "production" {
-		env = "development"
+	if *env != "production" {
+		*env = "development"
 	}
 
 	// read config
@@ -106,8 +105,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	dbhost := viper.GetString(env + ".dbhost")
-	dbname := viper.GetString(env + ".dbname")
+	dbhost := viper.GetString(*env + ".dbhost")
+	dbname := viper.GetString(*env + ".dbname")
 
 	// connect to the DB
 	log.Println("Connecting to mongo")
@@ -120,5 +119,5 @@ func main() {
 	// handle requests
 	http.HandleFunc("/", serveHome)
 	http.HandleFunc("/ws", serveWs)
-	log.Fatal(http.ListenAndServe(*addr, nil))
+	log.Fatal(http.ListenAndServe(*servingAddress, nil))
 }
