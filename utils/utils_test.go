@@ -2,9 +2,12 @@ package utils_test
 
 import (
 	"math"
+	"strconv"
 	"testing"
 
 	"fmt"
+
+	"strings"
 
 	"github.com/DiegoTUI/signpost/utils"
 	"github.com/golang/geo/s2"
@@ -140,5 +143,28 @@ func TestRandomInt(t *testing.T) {
 	random := utils.RandomInt(0, 0)
 	if random != 0 {
 		t.Error("RandomInt with two zeroes failed - ", random)
+	}
+}
+
+func TestGetExternalIP(t *testing.T) {
+	externalIp, err := utils.GetExternalIP()
+	if err != nil {
+		t.Error("GetExternalIp returned an error")
+	}
+
+	if strings.HasSuffix(externalIp, "\n") {
+		t.Error("GetExternalIp ends with a carriage return")
+	}
+
+	octects := strings.Split(externalIp, ".")
+
+	if len(octects) != 4 {
+		t.Error("Invalid number of octects")
+	}
+
+	for _, octect := range octects {
+		if octectInt, _ := strconv.ParseInt(octect, 10, 16); octectInt > 255 {
+			t.Error("Invalid octect")
+		}
 	}
 }

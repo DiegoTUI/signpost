@@ -1,15 +1,20 @@
 package main
 
 import (
+	"bytes"
 	"flag"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"runtime"
+	"time"
 
 	"path"
 
 	"github.com/DiegoTUI/signpost/db"
+	"github.com/DiegoTUI/signpost/utils"
+	"github.com/aymerick/raymond"
 	"github.com/gorilla/websocket"
 	"github.com/spf13/viper"
 )
@@ -17,6 +22,7 @@ import (
 var (
 	addr     = flag.String("addr", "127.0.0.1:8080", "http service address")
 	upgrader = websocket.Upgrader{}
+	host     string
 )
 
 func serveWs(w http.ResponseWriter, r *http.Request) {
@@ -49,13 +55,41 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, filename, _, _ := runtime.Caller(0)
-	http.ServeFile(w, r, path.Dir(filename)+"/home.html")
+	fileBytes, err := ioutil.ReadFile(path.Dir(filename) + "/home.html")
+	if err != nil {
+		http.Error(w, "Internal error"+err.Error(), 500)
+		return
+	}
+
+	var externalIP string
+	if len(host) > 0 {
+		externalIP = host
+	} else {
+		externalIP, err = utils.GetExternalIP()
+		if err != nil {
+			http.Error(w, "Internal error"+err.Error(), 500)
+			return
+		}
+	}
+
+	context := map[string]string{
+		"host": externalIP + ":8080",
+	}
+
+	homePage, err := raymond.Render(string(fileBytes), context)
+	if err != nil {
+		http.Error(w, "Internal error"+err.Error(), 500)
+		return
+	}
+
+	http.ServeContent(w, r, "home", time.Unix(0, 0), bytes.NewReader([]byte(homePage)))
 }
 
 func main() {
 	// read environment
 	var env string
 	flag.StringVar(&env, "env", env, "Environment: 'development' or 'production'")
+	flag.StringVar(&host, "host", host, "Host: if missing, it will add the external IP")
 	flag.Parse()
 
 	if env != "production" {

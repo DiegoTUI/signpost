@@ -2,8 +2,10 @@ package utils
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"math"
 	"math/rand"
+	"net/http"
 	"time"
 
 	"github.com/golang/geo/s1"
@@ -44,4 +46,27 @@ func RandomInt(min, max int) int {
 	}
 	rand.Seed(time.Now().UnixNano())
 	return rand.Intn(max-min) + min
+}
+
+// GetExternalIP retrieves the external IP of the machine running the server
+func GetExternalIP() (string, error) {
+	var netClient = &http.Client{
+		Timeout: time.Second * 10,
+	}
+
+	resp, err := netClient.Get("http://ipinfo.io/ip")
+	if err != nil {
+		return "", err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	bodyString := string(body)
+
+	return bodyString[:len(bodyString)-1], nil
 }
