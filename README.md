@@ -20,5 +20,5 @@ mongorestore -d signpost-test -c cities $GOPATH/src/github.com/DiegoTUI/signpost
 ```
 - Change to folder `$GOPATH/src/github.com/DiegoTUI/signpost`.
 - Run tests `go test ./...`
-- Run `go run ./cmd/signpost/*.go`
+- Run `go run ./cmd/signpost/*.go --host localhost`. If you ommit the `--host` flag, the system will set the external IP for the client.
 - Connect to http://localhost:8080 and enter queries of the form `cityName|minNumberOfSigns|minDistance|minDifficulty|maxNumberOfSigns|maxDistance|maxDifficulty`
