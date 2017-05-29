@@ -13,6 +13,12 @@ A simple server in Go to produce signposts.
 
 - Download repo `go get github.com/DiegoTUI/signpost/cmd/signpost`
 - Make sure your MongoDB instance is up and running on the standard port 27017
+- Restore the database for both "staging" and "testing databases":
+```
+mongorestore -d signpost -c cities $GOPATH/src/github.com/DiegoTUI/signpost/resources/mongodump/cities.bson
+mongorestore -d signpost-test -c cities $GOPATH/src/github.com/DiegoTUI/signpost/resources/mongodump/cities.bson
+```
 - Change to folder `$GOPATH/src/github.com/DiegoTUI/signpost`.
+- Run tests `go test ./...`
 - Run `go run ./cmd/signpost/*.go`
 - Connect to http://localhost:8080 and enter queries of the form `cityName|minNumberOfSigns|minDistance|minDifficulty|maxNumberOfSigns|maxDistance|maxDifficulty`
